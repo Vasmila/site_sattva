@@ -27,29 +27,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let startScrollLeft = 0;
         let currentIndex = 0;
         let cardWidth = 0;
-        let visibleCards = 1;
-        let isHorizontalScroll = false; // Флаг для определения направления скролла
+        let isHorizontalSwipe = false;
+        let isMoved = false;
         
         // Функция обновления ширины карточки
         function updateCardWidth() {
-            if (type === 'services') {
-                if (window.innerWidth <= 768) {
-                    visibleCards = 1;
-                } else if (window.innerWidth <= 1024) {
-                    visibleCards = 2;
-                } else {
-                    visibleCards = 3;
-                }
-            } else {
-                // Для акций
-                if (window.innerWidth <= 768) {
-                    visibleCards = 1;
-                } else {
-                    visibleCards = 2;
-                }
-            }
-            
-            // Получаем ширину первой карточки
             if (cards.length > 0) {
                 cardWidth = cards[0].offsetWidth;
             }
@@ -65,13 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const scrollPosition = index * (cardWidth + 24);
             
             if (animate) {
-                track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
                 track.style.transform = `translateX(-${scrollPosition}px)`;
             } else {
                 track.style.transition = 'none';
                 track.style.transform = `translateX(-${scrollPosition}px)`;
-                track.offsetHeight;
-                track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                void track.offsetHeight;
             }
             
             if (dots && dots.length > 0) {
@@ -90,18 +71,25 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
         
-        // Функция определения ближайшего индекса
+        // Функция определения ближайшего индекса (только соседние карточки)
         function getNearestIndex(scrollLeft) {
             const step = cardWidth + 24;
-            const index = Math.round(scrollLeft / step);
-            const maxIndex = cards.length - 1;
-            return Math.max(0, Math.min(index, maxIndex));
+            const currentCardIndex = scrollLeft / step;
+            const remainder = currentCardIndex - Math.floor(currentCardIndex);
+            
+            // Если прокручено больше половины карточки - переключаем на следующую
+            if (remainder > 0.5) {
+                return Math.min(Math.floor(currentCardIndex) + 1, cards.length - 1);
+            } else {
+                return Math.floor(currentCardIndex);
+            }
         }
         
         // Обработчик начала перетаскивания
         const startDrag = (e) => {
             isDragging = true;
-            isHorizontalScroll = false;
+            isMoved = false;
+            isHorizontalSwipe = false;
             startX = e.type === 'mousedown' ? e.pageX : e.touches[0].pageX;
             startY = e.type === 'mousedown' ? e.pageY : e.touches[0].pageY;
             startScrollLeft = parseFloat(track.style.transform.replace('translateX(-', '').replace('px)', '')) || 0;
@@ -118,14 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const deltaX = Math.abs(currentX - startX);
             const deltaY = Math.abs(currentY - startY);
             
-            // Определяем направление скролла после небольшого движения
-            if (!isHorizontalScroll && (deltaX > 5 || deltaY > 5)) {
-                isHorizontalScroll = deltaX > deltaY;
+            // Определяем направление после первого движения (более 5px)
+            if (!isHorizontalSwipe && (deltaX > 5 || deltaY > 5)) {
+                isHorizontalSwipe = deltaX > deltaY;
             }
             
-            // Если это горизонтальный скролл - предотвращаем прокрутку страницы
-            if (isHorizontalScroll) {
+            // Если это горизонтальный свайп - скроллим слайдер
+            if (isHorizontalSwipe) {
                 e.preventDefault();
+                isMoved = true;
                 let newScrollLeft = startScrollLeft - (currentX - startX);
                 
                 const step = cardWidth + 24;
@@ -134,33 +123,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 track.style.transform = `translateX(-${newScrollLeft}px)`;
             }
-            // Если вертикальный - ничего не делаем, страница скроллится естественным образом
         };
         
         // Обработчик окончания перетаскивания
-        const endDrag = () => {
+        const endDrag = (e) => {
             if (!isDragging) return;
             isDragging = false;
             slider.style.cursor = 'grab';
             
-            // Если был горизонтальный скролл - фиксируем позицию
-            if (isHorizontalScroll) {
+            // Если был горизонтальный свайп и было движение - фиксируем позицию
+            if (isHorizontalSwipe && isMoved) {
                 const currentScrollLeft = parseFloat(track.style.transform.replace('translateX(-', '').replace('px)', '')) || 0;
                 const nearestIndex = getNearestIndex(currentScrollLeft);
                 
-                track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                track.style.transition = 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
                 scrollToIndex(nearestIndex, true);
+            } else if (!isHorizontalSwipe && !isMoved) {
+                // Если это был клик, а не свайп - ничего не делаем
+                // Карточка откроется по ссылке
             }
             
-            // Сбрасываем флаги
-            isHorizontalScroll = false;
+            isHorizontalSwipe = false;
+            isMoved = false;
         };
         
         // Клик по dots
         if (dots && dots.length > 0) {
             dots.forEach((dot, index) => {
                 if (index < cards.length) {
-                    dot.addEventListener('click', () => {
+                    dot.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                         scrollToIndex(index, true);
                     });
                 }
@@ -176,9 +169,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const scrollPosition = currentIndex * (cardWidth + 24);
                 track.style.transition = 'none';
                 track.style.transform = `translateX(-${scrollPosition}px)`;
-                track.offsetHeight;
-                track.style.transition = 'transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                void track.offsetHeight;
             }, 150);
+        });
+        
+        // Наблюдатель за изменением размера карточек
+        const resizeObserver = new ResizeObserver(() => {
+            updateCardWidth();
+            const scrollPosition = currentIndex * (cardWidth + 24);
+            track.style.transform = `translateX(-${scrollPosition}px)`;
+        });
+        
+        cards.forEach(card => {
+            resizeObserver.observe(card);
         });
         
         // Инициализация
@@ -190,7 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.addEventListener('mousemove', onDrag);
         window.addEventListener('mouseup', endDrag);
         
-        // Добавляем обработчики для тач-событий (с пассивным слушателем для вертикального скролла)
+        // Добавляем обработчики для тач-событий
         slider.addEventListener('touchstart', startDrag, { passive: false });
         window.addEventListener('touchmove', onDrag, { passive: false });
         window.addEventListener('touchend', endDrag);
@@ -200,5 +203,12 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Устанавливаем курсор
         slider.style.cursor = 'grab';
+        
+        // Предотвращаем всплытие кликов на карточках
+        cards.forEach(card => {
+            card.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        });
     }
 });

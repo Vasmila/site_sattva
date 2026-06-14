@@ -11,6 +11,32 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentFilter = 'all';
     let isAnimating = false;
     
+    // Функция для применения мобильных стилей после фильтрации
+    function applyMobileStyles() {
+        if (window.innerWidth <= 768) {
+            // Принудительно применяем стили для карточек 1 типа
+            document.querySelectorAll('.blog-card').forEach(card => {
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '20px';
+            });
+            
+            // Принудительно применяем стили для карточек 2 типа
+            document.querySelectorAll('.blog-card-alt').forEach(card => {
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '20px';
+            });
+            
+            // Принудительно применяем стили для карточек 3 типа
+            document.querySelectorAll('.blog-card-bg').forEach(card => {
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.gap = '20px';
+            });
+        }
+    }
+    
     // Для кнопок "читать далее"
     // Функция для инициализации кнопок "читать далее" для первого типа карточек
     function initReadMoreButtonsFirstType() {
@@ -219,6 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             setTimeout(() => {
+                // Применяем мобильные стили после показа карточек
+                applyMobileStyles();
                 initAllReadMoreButtons();
                 isAnimating = false;
             }, 400);
@@ -264,11 +292,15 @@ document.addEventListener('DOMContentLoaded', () => {
         initAllReadMoreButtons();
     }, 500);
     
-    // обновление
+    // Применяем мобильные стили при загрузке
+    applyMobileStyles();
+    
+    // обновление при ресайзе
     let resizeTimeout;
     window.addEventListener('resize', () => {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
+            applyMobileStyles();
             initAllReadMoreButtons();
         }, 200);
     });
