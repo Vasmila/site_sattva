@@ -270,7 +270,6 @@
     cursor: grabbing;
 }
 
-/* Карточка должна растягиваться по высоте */
 .cert-mobile-card {
     flex-shrink: 0;
     width: 100%;
@@ -282,14 +281,13 @@
     box-sizing: border-box;
     pointer-events: none;
     height: auto;
-    min-height: 500px; /* Минимальная высота для одинакового размера */
+    min-height: 500px;
 }
 
 .cert-mobile-card * {
     pointer-events: auto;
 }
 
-/* Контент карточки - растягивается */
 .cert-mobile-card-content {
     display: flex;
     flex-direction: column;
@@ -326,7 +324,7 @@
     line-height: 1.4;
     margin-bottom: 20px;
     opacity: 0.85;
-    flex: 1; /* Текст занимает все доступное пространство */
+    flex: 1;
 }
 
 .cert-mobile-image {
@@ -340,10 +338,10 @@
 .cert-mobile-image img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
 }
 
-/* Блок с ценой и кнопкой - прижат к низу */
+/* Блок с ценой и кнопкой */
 .cert-mobile-bottom {
     margin-top: auto;
 }
